@@ -1,7 +1,8 @@
 # bash-scripts
 A collection of Bash scripts I'm writing for various things I might find useful
 
-##img_opt.sh
+## img_opt.sh - Image optimization
+
 A simple script that crawls a directory and uses Imagemagick to optimize images for web by setting DPI to 72, changing size and lowering quality. There is a ton of stuff yet to be done with it, but for now it's in a usable state for simple drop-in optimizations.
  - Does not follow symlinks by default.
  - Creates a folder called original_bak in every folder where an image has been altered, retaining the original so it can be used later for restoring (am planning to add a way to clean the backups out, and choose a different folder name.)
