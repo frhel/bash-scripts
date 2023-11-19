@@ -19,11 +19,12 @@ NC='\033[0m' # No Color
 BACKUPS_DIR_NAME="original_bak"
 
 # Read arguments from command line
-while getopts "hRw:q:t:d:r" opt; do
+while getopts "hORw:q:t:d:r" opt; do
   case $opt in
     h)
       echo -e "${NC}Usage: img_opt.sh [options] - use ./img_opt.sh if the script is not in your PATH and isn't executable${NC}"
       echo -e "${NC}Options:${NC}"
+      echo -e "${NC}-O${NC}  Re-optimize all images in the current directory and its subdirectories from the backup files"
       echo -e "${NC}-h${NC}  Show this help message and exit"
       echo -e "${NC}-R${NC}  Crawls through all subdirectories and restores all images to their original state"
       echo -e "${NC}-w${NC}  Set the maximum width of the images (default: 1920)"
@@ -37,6 +38,9 @@ while getopts "hRw:q:t:d:r" opt; do
       echo -e "${NC}Example: img_opt.sh -r${NC} (restores all images in the current directory)"
       echo -e "${NC}Example: img_opt.sh -Rr${NC} (restores all images in the current directory and its subdirectories)"
       exit 0
+      ;;
+    O)
+      RE_OPT="y"
       ;;
     R)
       RECURSIVE="y"
@@ -101,6 +105,9 @@ fi
 if [ -z "$TYPES" ]; then
   TYPES=("jpg" "png" "webp")
 fi
+if [ -z "RE_OPT" ]; then
+  RE_OPT="n"
+fi
 MAX_DPI=72
 
 
@@ -144,64 +151,39 @@ function optimize_images {
   for type in "${file_types[@]}"; do
     # Iterate through all images of the current type in the directory, backup and optimize them
     for f in $1/*.$type; do
-      local underscored_file_name=${f// /_}
-      local file_name=$(basename $underscored_file_name)
+      local file_name=$(basename "${f}")
+      echo -e "${YELLOW}Found image: ${CYAN}${file_name}${NC}"
       local source=$f
       local backup_file="${backup_path}/${file_name}"
 
       # Putting the restore option here so that we don't have to check if the file exists twice
       # And so that we can reuse the for loops and variables
       if [ "$RESTORE" == "y" ]; then
-        if ! [ -f $backup_file ] || ! [ -f $source ]; then
+        if ! [ -f "$backup_file" ] || ! [ -f "$source" ]; then
           continue
         fi
         printf "${PURPLE}Restoring${YELLOW} $f...${NC}"
-        mv $backup_file $source
+        mv "${backup_file}" "${source}"
         printf "${GREEN}Done.${NC}\n"
         continue
-      fi
-
-      # Linux doesn't like spaces in filenames so we need to escape them
-      # Rename files with spaces to have underscores instead
-      if [[ $source == *" "* ]]; then
-        if ! [ "$rename_all" == "y" ]; then        
-          echo -e "${RED}Filename has whitespaces:${YELLOW} $source${NC}"
-          echo -e "${RED}Do you want to rename it and replace the whitespace with underscores?"
-          echo -e "This will rename the file to ${YELLOW}${file_name// /_}${RED} so all references to it will need to be updated."
-          printf "${CYAN}(y/n) ${NC}"
-          read rename
-        fi
-        if [ "$rename" == "y" ] || [ "$rename_all" == "y" ]; then
-          if [ "$rename_all" != "y" ] && [ "$rename_all" != "n" ]; then
-            printf "${CYAN}Do you want to do this for all files? (y/n) ${NC}"
-            read rename_all
-          fi
-
-          local new_name=${f// /_}
-          mv "$source" $new_name
-          local source=$new_name
-          
-          echo -e "${GREEN}Renamed $f${NC}"
-        else
-          echo -e "${YELLOW}Skipping $f$ due to whitespace in filename${NC}"
-          continue
-        fi
       fi
       
       # Check if the file exists
       if ! [ -f "$source" ]; then continue; fi            
 
       # If there already is a backup, use that
-      if [ -f $backup_file ]; then
-          local source=$backup_file
-          continue # Skip the file if there is backup - This line can be removed if you want to re-optimize all images
+      if [ -f "$backup_file" ]; then
+          local source="${backup_file}"
+          if [ "$RE_OPT" == "n" ]; then
+            continue # Skip the file if it has already been optimized and we don't want to re-optimize
+          fi
       else
-          cp $source $backup_file
+          cp "${source}" "${backup_file}"
       fi
       
       printf "${PURPLE}Optimizing${YELLOW} $f...${NC}"
       # Actually finally run the optimization command
-      convert $source -resize $MAX_WIDTH -density $MAX_DPI -quality $QUALITY $source
+      convert "${source}" -resize $MAX_WIDTH -density $MAX_DPI -quality $QUALITY "${source}"
       printf "${GREEN}Done.${NC}\n"
     done
   done
