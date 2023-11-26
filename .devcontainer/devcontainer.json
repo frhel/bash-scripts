@@ -12,6 +12,10 @@
 		"ghcr.io/devcontainers-contrib/features/gh-cli:1": {
 			"version": "latest"
 		}
+	},	
+	"remoteEnv": {
+		"REPO_ROOT": "${localWorkspaceFolder}",
+		"REPO_ROOT_NAME": "${localWorkspaceFolderBasename}",
 	},
 
 	// Mount the host computer's .ssh folder into the container to inherit your SSH keys
